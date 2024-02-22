@@ -3,13 +3,13 @@
 """
 This script provides an CLI interface for interacting with the OpenAI API.
 """
-
 import sys
 import os
 import configparser
 import json
 import socket
 import time
+import logging
 from datetime import datetime
 from openai import OpenAI
 
@@ -23,6 +23,11 @@ config.read(os.path.expanduser("~/.jot"))
 if "settings" not in config.keys():
     config.add_section("settings")
 
+logging.basicConfig(
+    filename=os.path.expanduser(config["logging"]["path"]),
+    encoding='utf-8',
+    level=config["logging"]["level"]
+    )
 
 def save_config():
     """Saves the open configuration file"""
@@ -40,12 +45,16 @@ def wait(run_to_start, time_in_seconds = 1):
 
         if this_run.status == "completed":
             this_message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
-            response = this_message.data[-1].content[-1].text.value
+            logging.debug(this_run)
             break
 
         time.sleep(time_in_seconds)
 
-    print(response)
+    logging.debug(this_message)
+    logging.info(this_message.data[0].content[0].text.value)
+
+    if config["settings"]["hide_responses"] == "false":
+        print(this_message.data[0].content[0].text.value)
 
 def get_or_create_assistant():
     """Checks the config for an assistant id, and creates one if not.
@@ -61,6 +70,7 @@ def get_or_create_assistant():
             instructions=config.get("settings", "instructions"),
         )
         config["settings"]["assistant_id"] = assistant.id
+        logging.info(assistant)
         save_config()
 
     return config["settings"]["assistant_id"]
@@ -87,10 +97,14 @@ def attach_file(file):
         purpose="assistants"
     )
 
+    logging.debug(created_file)
+
     assistant_file = client.beta.assistants.files.create(
         assistant_id=get_or_create_assistant(),
         file_id=created_file.id
     )
+
+    logging.info(assistant_file)
 
     return assistant_file
 
@@ -134,7 +148,8 @@ if COMMAND in ["-f", "--file"]:
     with open(sys.argv[2], 'rb') as file_to_open:
         attached_file_id = attach_file(file_to_open).id
 
-    print(f"File attached: {attached_file_id}")
+    run = build_message(f"Ive added a file for you with this id: {attached_file_id}!", None)
+    wait(run, 1)
 
 if COMMAND in ["-i", "--instructions"]:
     instructions = sys.argv[2]
@@ -144,24 +159,18 @@ if COMMAND in ["-i", "--instructions"]:
       instructions=instructions,
       name=NAME,
       tools=[{"type": "retrieval"}],
-      model=config.get("settings", "model").strip('"'),
+      model=config.get("settings", "model"),
     )
 
     run = build_message(f"Ive updated your instructions to: {instructions}!", None)
-    wait(run, 5)
+    wait(run, 1)
 
 if COMMAND in ["-q", "--query"]:
     query = sys.argv[2]
     run = build_message(query, "message")
-    wait(run, 5)
+    wait(run, 1)
 
 if COMMAND in ["-n", "--note"]:
     note = sys.argv[2]
     run = build_message(note, "note")
-    wait(run, 5)
-
-if COMMAND in ["-l", "--list"]:
-    messages = client.beta.threads.messages.list(get_or_create_thread(), order="asc")
-
-    for message in messages:
-        print(message.content[-1].text.value)
+    wait(run, 1)
