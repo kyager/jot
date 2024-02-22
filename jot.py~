@@ -6,15 +6,17 @@ import configparser
 import json
 import socket
 import time
-import openai
 from datetime import datetime
 from openai import OpenAI
 
-NOW = datetime.now()
-FINAL_MESSAGE = None
-COMMAND = sys.argv[1]
-CONTENT = " ".join(sys.argv[2:]).strip("'")
+now = datetime.now()
+final_message = None
+command = sys.argv[1]
+content = " ".join(sys.argv[2:]).strip(
+    "'"
+)  # sys.argv[1:] excludes the script name from the args
 
+# get config
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
 if "settings" not in config.keys():
@@ -59,11 +61,21 @@ def createMessageAndThread(content):
 
 
 def createNoteAndThread(content):
+    """e
+    Creates a note message and a thread.
+
+    Args:
+        content (str): The content of the note message.
+
+    Returns:
+        str: The ID of the created thread.
+        str: The ID of the created message.
+    """
     thread_id = getOrCreateThread()
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content=f"{json.dumps([{'type':'note','datetime':str(NOW),'content': content}])}",
+        content=f"{json.dumps([{'type':'note','datetime':str(now),'content': content}])}",
     )
     return thread_id, message
 
@@ -71,8 +83,8 @@ def createNoteAndThread(content):
 client = OpenAI()
 
 
-if COMMAND in ["-q", "--query"]:
-    thread_id, message = createMessageAndThread(CONTENT)
+if command in ["-q", "--query"]:
+    thread_id, message = createMessageAndThread(content)
 
     run = client.beta.threads.runs.create(
         thread_id=message.thread_id, assistant_id=getOrCreateAssistant()
@@ -85,14 +97,14 @@ if COMMAND in ["-q", "--query"]:
 
         if this_run.status == "completed":
             message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
-            FINAL_MESSAGE = message.data[-1].content[-1].text.value
+            final_message = message.data[-1].content[-1].text.value
             break
 
         time.sleep(1)
 
 
-if COMMAND in ["-n", "--note"]:
-    thread_id, message = createNoteAndThread(CONTENT)
+if command in ["-n", "--note"]:
+    thread_id, message = createNoteAndThread(content)
 
     run = client.beta.threads.runs.create(
         thread_id=message.thread_id, assistant_id=getOrCreateAssistant()
@@ -105,16 +117,16 @@ if COMMAND in ["-n", "--note"]:
 
         if this_run.status == "completed":
             message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
-            FINAL_MESSAGE = message.data[-1].content[-1].text.value
+            final_message = message.data[-1].content[-1].text.value
             break
 
         time.sleep(1)
 
-if COMMAND in ["-l", "--list"]:
+if command in ["-l", "--list"]:
     messages = client.beta.threads.messages.list(getOrCreateThread(), order="asc")
 
     for message in messages:
         print(message.content[-1].text.value)
 
-if FINAL_MESSAGE:
-    print(FINAL_MESSAGE)
+if final_message:
+    print(final_message)
