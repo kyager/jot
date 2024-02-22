@@ -21,12 +21,12 @@ if "settings" not in config.keys():
     config.add_section("settings")
 
 
-def saveConfig():
+def save_config():
     with open(os.path.expanduser("~/.jot"), "w") as configfile:
         config.write(configfile)
 
 
-def getOrCreateAssistant():
+def get_or_create_assistant():
     if "assistant_id" not in config["settings"]:
         assistant = client.beta.assistants.create(
             name=socket.gethostname(),
@@ -34,22 +34,22 @@ def getOrCreateAssistant():
             instructions=config.get("settings", "instructions"),
         )
         config["settings"]["assistant_id"] = assistant.id
-        saveConfig()
+        save_config()
 
     return config["settings"]["assistant_id"]
 
 
-def getOrCreateThread():
+def get_or_create_thread():
     if "thread_id" not in config["settings"]:
         thread = client.beta.threads.create()
         config["settings"]["thread_id"] = thread.id
-        saveConfig()
+        save_config()
 
     return config["settings"]["thread_id"]
 
 
-def createMessageAndThread(content):
-    thread_id = getOrCreateThread()
+def create_message_and_thread(content):
+    thread_id = get_or_create_thread()
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
@@ -58,8 +58,8 @@ def createMessageAndThread(content):
     return thread_id, message
 
 
-def createNoteAndThread(content):
-    thread_id = getOrCreateThread()
+def create_note_and_thread(content):
+    thread_id = get_or_create_thread()
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
@@ -72,10 +72,10 @@ client = OpenAI()
 
 
 if COMMAND in ["-q", "--query"]:
-    thread_id, message = createMessageAndThread(CONTENT)
+    thread_id, message = create_message_and_thread(CONTENT)
 
     run = client.beta.threads.runs.create(
-        thread_id=message.thread_id, assistant_id=getOrCreateAssistant()
+        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
     )
 
     while True:
@@ -92,10 +92,10 @@ if COMMAND in ["-q", "--query"]:
 
 
 if COMMAND in ["-n", "--note"]:
-    thread_id, message = createNoteAndThread(CONTENT)
+    thread_id, message = create_note_and_thread(CONTENT)
 
     run = client.beta.threads.runs.create(
-        thread_id=message.thread_id, assistant_id=getOrCreateAssistant()
+        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
     )
 
     while True:
@@ -111,7 +111,7 @@ if COMMAND in ["-n", "--note"]:
         time.sleep(1)
 
 if COMMAND in ["-l", "--list"]:
-    messages = client.beta.threads.messages.list(getOrCreateThread(), order="asc")
+    messages = client.beta.threads.messages.list(get_or_create_thread(), order="asc")
 
     for message in messages:
         print(message.content[-1].text.value)
