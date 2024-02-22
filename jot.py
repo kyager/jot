@@ -17,6 +17,7 @@ NOW = datetime.now()
 FINAL_MESSAGE = None
 COMMAND = sys.argv[1]
 CONTENT = " ".join(sys.argv[2:]).strip("'")
+NAME = socket.gethostname()
 
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
@@ -39,7 +40,7 @@ def get_or_create_assistant():
    """
     if "assistant_id" not in config["settings"]:
         assistant = client.beta.assistants.create(
-            name=socket.gethostname(),
+            name=NAME,
             model=config.get("settings", "model").strip('"'),
             instructions=config.get("settings", "instructions"),
         )
@@ -88,6 +89,32 @@ def create_note_and_thread(content):
 
 client = OpenAI()
 
+if COMMAND in ["-i", "--instructions"]:
+    my_updated_assistant = client.beta.assistants.update(
+      get_or_create_assistant(),
+      instructions=CONTENT,
+      name=NAME,
+      model=config.get("settings", "model").strip('"'),
+    )
+
+    thread_id, message = create_message_and_thread(CONTENT)
+    create_message_and_thread(f"Ive updated your instructions to: {CONTENT}, I hope you enjoy!")
+
+    run = client.beta.threads.runs.create(
+        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
+    )
+
+    while True:
+        this_run = client.beta.threads.runs.retrieve(
+            thread_id=run.thread_id, run_id=run.id
+        )
+
+        if this_run.status == "completed":
+            message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
+            FINAL_MESSAGE = message.data[-1].content[-1].text.value
+            break
+
+        time.sleep(1)
 
 if COMMAND in ["-q", "--query"]:
     thread_id, message = create_message_and_thread(CONTENT)
