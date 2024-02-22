@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+This script provides an CLI interface for interacting with the OpenAI API.
+"""
+
 import sys
 import os
 import configparser
@@ -21,11 +25,18 @@ if "settings" not in config.keys():
 
 
 def save_config():
+    """Saves the open configuration file"""
     with open(os.path.expanduser("~/.jot"), "w", encoding="utf-8") as configfile:
         config.write(configfile)
 
 
 def get_or_create_assistant():
+    """Checks the config for an assistant id, and creates one if not.
+
+    Returns:
+        string:assistant_id
+
+   """
     if "assistant_id" not in config["settings"]:
         assistant = client.beta.assistants.create(
             name=socket.gethostname(),
@@ -39,6 +50,12 @@ def get_or_create_assistant():
 
 
 def get_or_create_thread():
+    """Checks the config for an thread id, and creates one if not.
+
+    Returns:
+    string:thread_id
+
+   """
     if "thread_id" not in config["settings"]:
         thread = client.beta.threads.create()
         config["settings"]["thread_id"] = thread.id
@@ -48,6 +65,7 @@ def get_or_create_thread():
 
 
 def create_message_and_thread(content):
+    """Helper function for building messages"""
     thread = get_or_create_thread()
     created_message = client.beta.threads.messages.create(
         thread_id=thread,
@@ -58,6 +76,7 @@ def create_message_and_thread(content):
 
 
 def create_note_and_thread(content):
+    """Helper function for building notes"""
     thread = get_or_create_thread()
     created_message = client.beta.threads.messages.create(
         thread_id=thread_id,
