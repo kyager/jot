@@ -44,7 +44,11 @@ def wait(run_to_start, time_in_seconds = 1):
         )
 
         if this_run.status == "completed":
-            this_message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
+            this_message = client.beta.threads.messages.list(
+                thread_id=run_to_start.thread_id,
+                limit=1
+            )
+            
             logging.debug(this_run)
             break
 
