@@ -64,16 +64,39 @@ def get_or_create_thread():
 
     return config["settings"]["thread_id"]
 
+def build_message(content, template):
+    """Builds a message using a specified template.
 
-def create_message_and_thread(content):
-    """Helper function for building messages"""
-    thread = get_or_create_thread()
-    created_message = client.beta.threads.messages.create(
-        thread_id=thread,
+    Returns:
+    object:run
+
+    """
+    thread_id = get_or_create_thread()
+    assistant_id = get_or_create_assistant()
+
+    if template == "message":
+        templated_content = f"{content}"
+    elif template == "note":
+        templated_content = json.dumps([{
+            'type':'note',
+            'datetime':str(NOW),
+            'content': content
+        }])
+    else:
+        templated_content = content
+
+    built_message = client.beta.threads.messages.create(
+        thread_id=thread_id,
         role="user",
-        content=content,
+        content=templated_content,
     )
-    return thread, created_message
+
+    message_run = client.beta.threads.runs.create(
+        thread_id=built_message.thread_id, assistant_id=assistant_id
+    )
+
+    return message_run
+
 
 client = OpenAI()
 
@@ -85,12 +108,7 @@ if COMMAND in ["-i", "--instructions"]:
       model=config.get("settings", "model").strip('"'),
     )
 
-    thread_id, message = create_message_and_thread(CONTENT)
-    create_message_and_thread(f"Ive updated your instructions to: {CONTENT}, I hope you enjoy!")
-
-    run = client.beta.threads.runs.create(
-        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
-    )
+    run = build_message(f"Ive updated your instructions to: {CONTENT}, I hope you enjoy!", None)
 
     while True:
         this_run = client.beta.threads.runs.retrieve(
@@ -98,18 +116,14 @@ if COMMAND in ["-i", "--instructions"]:
         )
 
         if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
+            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
             FINAL_MESSAGE = message.data[-1].content[-1].text.value
             break
 
         time.sleep(1)
 
 if COMMAND in ["-q", "--query"]:
-    thread_id, message = create_message_and_thread(CONTENT)
-
-    run = client.beta.threads.runs.create(
-        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
-    )
+    run = build_message(CONTENT, "message")
 
     while True:
         this_run = client.beta.threads.runs.retrieve(
@@ -117,7 +131,7 @@ if COMMAND in ["-q", "--query"]:
         )
 
         if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
+            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
             FINAL_MESSAGE = message.data[-1].content[-1].text.value
             break
 
@@ -125,17 +139,7 @@ if COMMAND in ["-q", "--query"]:
 
 
 if COMMAND in ["-n", "--note"]:
-    thread_id = get_or_create_thread()
-    
-    created_message = client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=f"{json.dumps([{'type':'note','datetime':str(NOW),'content': CONTENT}])}",
-    )
-
-    run = client.beta.threads.runs.create(
-        thread_id=created_message.thread_id, assistant_id=get_or_create_assistant()
-    )
+    run = build_message(CONTENT, "note")
 
     while True:
         this_run = client.beta.threads.runs.retrieve(
@@ -143,7 +147,7 @@ if COMMAND in ["-n", "--note"]:
         )
 
         if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=thread_id, limit=1)
+            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
             FINAL_MESSAGE = message.data[-1].content[-1].text.value
             break
 
