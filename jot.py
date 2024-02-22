@@ -148,8 +148,7 @@ if COMMAND in ["-f", "--file"]:
     with open(sys.argv[2], 'rb') as file_to_open:
         attached_file_id = attach_file(file_to_open).id
 
-    run = build_message(f"Ive added a file for you with this id: {attached_file_id}!", None)
-    wait(run, 1)
+    wait(build_message(f"Ive added a file for you with this id: {attached_file_id}!", None), 1)
 
 if COMMAND in ["-i", "--instructions"]:
     instructions = sys.argv[2]
@@ -162,15 +161,10 @@ if COMMAND in ["-i", "--instructions"]:
       model=config.get("settings", "model"),
     )
 
-    run = build_message(f"Ive updated your instructions to: {instructions}!", None)
-    wait(run, 1)
+    wait(build_message(f"Ive updated your instructions to: {instructions}!", None), 1)
 
 if COMMAND in ["-q", "--query"]:
-    query = sys.argv[2]
-    run = build_message(query, "message")
-    wait(run, 1)
+    wait(build_message(sys.argv[2], "message"), 1)
 
 if COMMAND in ["-n", "--note"]:
-    note = sys.argv[2]
-    run = build_message(note, "note")
-    wait(run, 1)
+    wait(build_message(sys.argv[2], "note"), 1)
