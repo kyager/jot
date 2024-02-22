@@ -4,6 +4,13 @@
 
 Just a simple script for woring with the OpenAI Assistant API.
 
+## OpenAI Setup
+You will need an API key, which can be acquired here: https://platform.openai.com/api-keys.
+
+Then add the key to your environment variables.
+
+`export OPENAI_API_KEY="sk-ABC123"`
+
 ## Configuration
 Needs to be placed in `~/.jot`
 ```.jot
