@@ -75,18 +75,6 @@ def create_message_and_thread(content):
     )
     return thread, created_message
 
-
-def create_note_and_thread(content):
-    """Helper function for building notes"""
-    thread = get_or_create_thread()
-    created_message = client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=f"{json.dumps([{'type':'note','datetime':str(NOW),'content': content}])}",
-    )
-    return thread, created_message
-
-
 client = OpenAI()
 
 if COMMAND in ["-i", "--instructions"]:
@@ -137,10 +125,16 @@ if COMMAND in ["-q", "--query"]:
 
 
 if COMMAND in ["-n", "--note"]:
-    thread_id, message = create_note_and_thread(CONTENT)
+    thread_id = get_or_create_thread()
+    
+    created_message = client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=f"{json.dumps([{'type':'note','datetime':str(NOW),'content': CONTENT}])}",
+    )
 
     run = client.beta.threads.runs.create(
-        thread_id=message.thread_id, assistant_id=get_or_create_assistant()
+        thread_id=created_message.thread_id, assistant_id=get_or_create_assistant()
     )
 
     while True:
