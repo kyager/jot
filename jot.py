@@ -16,7 +16,6 @@ from openai import OpenAI
 NOW = datetime.now()
 FINAL_MESSAGE = None
 COMMAND = sys.argv[1]
-CONTENT = " ".join(sys.argv[2:]).strip("'")
 NAME = socket.gethostname()
 
 config = configparser.ConfigParser()
@@ -58,7 +57,7 @@ def get_or_create_assistant():
     if "assistant_id" not in config["settings"]:
         assistant = client.beta.assistants.create(
             name=NAME,
-            model=config.get("settings", "model").strip('"'),
+            model=config.get("settings", "model"),
             instructions=config.get("settings", "instructions"),
         )
         config["settings"]["assistant_id"] = assistant.id
@@ -80,6 +79,20 @@ def get_or_create_thread():
         save_config()
 
     return config["settings"]["thread_id"]
+
+def attach_file(file):
+    """Uploads a file and attaches it to your current assistant"""
+    created_file = client.files.create(
+        file=file,
+        purpose="assistants"
+    )
+
+    assistant_file = client.beta.assistants.files.create(
+        assistant_id=get_or_create_assistant(),
+        file_id=created_file.id
+    )
+
+    return assistant_file
 
 def build_message(content, template):
     """Builds a message using a specified template.
@@ -117,23 +130,34 @@ def build_message(content, template):
 
 client = OpenAI()
 
+if COMMAND in ["-f", "--file"]:
+    with open(sys.argv[2], 'rb') as file_to_open:
+        attached_file_id = attach_file(file_to_open).id
+
+    print(f"File attached: {attached_file_id}")
+
 if COMMAND in ["-i", "--instructions"]:
+    instructions = sys.argv[2]
+
     my_updated_assistant = client.beta.assistants.update(
       get_or_create_assistant(),
-      instructions=CONTENT,
+      instructions=instructions,
       name=NAME,
+      tools=[{"type": "retrieval"}],
       model=config.get("settings", "model").strip('"'),
     )
 
-    run = build_message(f"Ive updated your instructions to: {CONTENT}, I hope you enjoy!", None)
+    run = build_message(f"Ive updated your instructions to: {instructions}!", None)
     wait(run, 5)
 
 if COMMAND in ["-q", "--query"]:
-    run = build_message(CONTENT, "message")
+    query = sys.argv[2]
+    run = build_message(query, "message")
     wait(run, 5)
 
 if COMMAND in ["-n", "--note"]:
-    run = build_message(CONTENT, "note")
+    note = sys.argv[2]
+    run = build_message(note, "note")
     wait(run, 5)
 
 if COMMAND in ["-l", "--list"]:
