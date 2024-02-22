@@ -6,7 +6,6 @@ import configparser
 import json
 import socket
 import time
-import openai
 from datetime import datetime
 from openai import OpenAI
 
@@ -22,7 +21,7 @@ if "settings" not in config.keys():
 
 
 def save_config():
-    with open(os.path.expanduser("~/.jot"), "w") as configfile:
+    with open(os.path.expanduser("~/.jot"), "w", encoding="utf-8") as configfile:
         config.write(configfile)
 
 
@@ -49,23 +48,23 @@ def get_or_create_thread():
 
 
 def create_message_and_thread(content):
-    thread_id = get_or_create_thread()
-    message = client.beta.threads.messages.create(
-        thread_id=thread_id,
+    thread = get_or_create_thread()
+    created_message = client.beta.threads.messages.create(
+        thread_id=thread,
         role="user",
         content=content,
     )
-    return thread_id, message
+    return thread, created_message
 
 
 def create_note_and_thread(content):
-    thread_id = get_or_create_thread()
-    message = client.beta.threads.messages.create(
+    thread = get_or_create_thread()
+    created_message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=f"{json.dumps([{'type':'note','datetime':str(NOW),'content': content}])}",
     )
-    return thread_id, message
+    return thread, created_message
 
 
 client = OpenAI()
