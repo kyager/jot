@@ -48,7 +48,6 @@ def wait(run_to_start, time_in_seconds = 1):
                 thread_id=run_to_start.thread_id,
                 limit=1
             )
-            
             logging.debug(this_run)
             break
 
