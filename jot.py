@@ -30,6 +30,23 @@ def save_config():
     with open(os.path.expanduser("~/.jot"), "w", encoding="utf-8") as configfile:
         config.write(configfile)
 
+def wait(run_to_start, time_in_seconds = 1):
+    """Starts run and checks it every {time_in_seconds}
+    until it's status is marked as completed.
+    """
+    while True:
+        this_run = client.beta.threads.runs.retrieve(
+            thread_id=run_to_start.thread_id, run_id=run_to_start.id
+        )
+
+        if this_run.status == "completed":
+            this_message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
+            response = this_message.data[-1].content[-1].text.value
+            break
+
+        time.sleep(time_in_seconds)
+
+    print(response)
 
 def get_or_create_assistant():
     """Checks the config for an assistant id, and creates one if not.
@@ -109,55 +126,18 @@ if COMMAND in ["-i", "--instructions"]:
     )
 
     run = build_message(f"Ive updated your instructions to: {CONTENT}, I hope you enjoy!", None)
-
-    while True:
-        this_run = client.beta.threads.runs.retrieve(
-            thread_id=run.thread_id, run_id=run.id
-        )
-
-        if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
-            FINAL_MESSAGE = message.data[-1].content[-1].text.value
-            break
-
-        time.sleep(1)
+    wait(run, 5)
 
 if COMMAND in ["-q", "--query"]:
     run = build_message(CONTENT, "message")
-
-    while True:
-        this_run = client.beta.threads.runs.retrieve(
-            thread_id=run.thread_id, run_id=run.id
-        )
-
-        if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
-            FINAL_MESSAGE = message.data[-1].content[-1].text.value
-            break
-
-        time.sleep(1)
-
+    wait(run, 5)
 
 if COMMAND in ["-n", "--note"]:
     run = build_message(CONTENT, "note")
-
-    while True:
-        this_run = client.beta.threads.runs.retrieve(
-            thread_id=run.thread_id, run_id=run.id
-        )
-
-        if this_run.status == "completed":
-            message = client.beta.threads.messages.list(thread_id=run.thread_id, limit=1)
-            FINAL_MESSAGE = message.data[-1].content[-1].text.value
-            break
-
-        time.sleep(1)
+    wait(run, 5)
 
 if COMMAND in ["-l", "--list"]:
     messages = client.beta.threads.messages.list(get_or_create_thread(), order="asc")
 
     for message in messages:
         print(message.content[-1].text.value)
-
-if FINAL_MESSAGE:
-    print(FINAL_MESSAGE)
