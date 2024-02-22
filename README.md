@@ -4,6 +4,15 @@
 
 Just a simple script for woring with the OpenAI Assistant API.
 
+## Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `jot --query "Text"` | Sends a query to the assistant. |
+| `jot --note "Text"` | Sends a JSON formatted note to the assistant. |
+| `jot --file [file_path]` | Attaches a file to the assistant. |
+| `jot --instructions "Text"` | Updates the assistants instructions. |
+
 ## OpenAI Setup
 You will need an API key, which can be acquired here: https://platform.openai.com/api-keys.
 
