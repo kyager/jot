@@ -2,7 +2,7 @@
 
 # Jot
 
-Just a simple script for working with the OpenAI Assistant API.
+Just a simple script for working with the OpenAI API.
 
 ```
 usage: jot [-h] [-o {json,text}] {image,moderate,assist,attach,instructions} prompt
