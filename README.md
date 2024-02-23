@@ -29,7 +29,6 @@ model = gpt-3.5-turbo-0125
 thread_id = 
 assistant_id = 
 hide_responses = false
-personality = your personal assistant
 
 [logging]
 level = INFO
