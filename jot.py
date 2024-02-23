@@ -115,6 +115,10 @@ def attach_file(file):
 
     return assistant_file
 
+def personalize(content):
+    """Wraps the content in a personality prompt for fun"""
+    return f"Respond in the personality of a {config['settings']['personality']}: {content}"
+
 def build_message(content, template):
     """Builds a message using a specified template.
 
@@ -126,7 +130,7 @@ def build_message(content, template):
     assistant_id = get_or_create_assistant()
 
     if template == "message":
-        templated_content = f"{content}"
+        templated_content = personalize(content)
     elif template == "note":
         templated_content = json.dumps([{
             'type':'note',
