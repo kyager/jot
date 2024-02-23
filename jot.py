@@ -78,6 +78,20 @@ def get_or_create_thread():
 
     return config["settings"]["thread_id"]
 
+def add_tools(assistant_id, tools):
+    """Adds the specified tools to your current assistant"""
+    client.beta.assistants.update(
+        assistant_id = assistant_id,
+        tools=tools
+    )
+
+def remove_tools(assistant_id):
+    """Removes all tools from your current assistant"""
+    client.beta.assistants.update(
+        assistant_id = assistant_id,
+        tools=[]
+    )
+
 def attach_file(file):
     """Uploads a file and attaches it to your current assistant"""
     created_file = client.files.create(
@@ -85,14 +99,12 @@ def attach_file(file):
         purpose="assistants"
     )
 
-    logging.debug(created_file)
-
+    add_tools(get_or_create_assistant(), [{"type": "code_interpreter"}])
     assistant_file = client.beta.assistants.files.create(
         assistant_id=get_or_create_assistant(),
         file_id=created_file.id
     )
-
-    logging.info(assistant_file)
+    remove_tools(get_or_create_assistant())
 
     return assistant_file
 
@@ -106,6 +118,10 @@ def send_message(content, template, interval = 1):
     """
     thread_id = get_or_create_thread()
     assistant_id = get_or_create_assistant()
+
+    # If it looks like we're trying to use a file, ensure the needed tools are added
+    if "file-" in content:
+        add_tools(assistant_id, [{"type": "code_interpreter"}])
 
     if template == "message":
         templated_content = personalize(content)
@@ -143,6 +159,9 @@ def send_message(content, template, interval = 1):
 
         time.sleep(interval)
 
+    if "file-" in content:
+        remove_tools(assistant_id)
+        
     logging.debug(this_message)
     logging.info(this_message.data[0].content[0].text.value)
 
@@ -161,17 +180,17 @@ try:
     if args.instructions:
         my_updated_assistant = client.beta.assistants.update(
             get_or_create_assistant(),
-            instructions=args.instructions,
-            name=NAME,
-            tools=[{"type": "retrieval"}],
-            model=config.get("settings", "model"),
+            instructions=args.instructions
         )
 
         send_message(f"Ive updated your instructions to: {args.instructions}!", None, 1)
 
     if args.file:
         with open(args.file, 'rb') as file_to_open:
-            logging.info(attach_file(file_to_open))
+            attached_file = attach_file(file_to_open)
+            logging.info(attached_file)
+
+            print(f"file_id = {attached_file.id}")
 
 except argparse.ArgumentError as err:
     logging.error(err)
