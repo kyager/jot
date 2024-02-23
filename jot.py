@@ -19,15 +19,17 @@ FINAL_MESSAGE = None
 NAME = socket.gethostname()
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument("-I", "--image", help = "Generates an image.")
-PARSER.add_argument("-q", "--query", help = "Sends a query the assistant.")
-PARSER.add_argument("-f", "--file", help = "Attaches a file to your assistant.")
-PARSER.add_argument("-i", "--instructions", help = "Updates your assistants instructions.")
+PARSER.add_argument("-I", "--image", help="Generates an image.")
+PARSER.add_argument("-q", "--query", help="Sends a query the assistant.")
+PARSER.add_argument("-f", "--file", help="Attaches a file to your assistant.")
+PARSER.add_argument(
+    "-i", "--instructions", help="Updates your assistants instructions."
+)
 PARSER.add_argument(
     "-t",
     "--template",
-    help = "Specifies a custom template for your queries",
-    default = "message"
+    help="Specifies a custom template for your queries",
+    default="message",
 )
 
 config = configparser.ConfigParser()
@@ -37,14 +39,16 @@ if "settings" not in config.keys():
 
 logging.basicConfig(
     filename=os.path.expanduser(config["logging"]["path"]),
-    encoding='utf-8',
-    level=config["logging"]["level"]
-    )
+    encoding="utf-8",
+    level=config["logging"]["level"],
+)
+
 
 def save_config():
     """Saves the open configuration file"""
     with open(os.path.expanduser("~/.jot"), "w", encoding="utf-8") as configfile:
         config.write(configfile)
+
 
 def get_or_create_assistant():
     """Checks the config for an assistant id, and creates one if not.
@@ -52,7 +56,7 @@ def get_or_create_assistant():
     Returns:
         string:assistant_id
 
-   """
+    """
     if "assistant_id" not in config["settings"]:
         assistant = client.beta.assistants.create(
             name=NAME,
@@ -72,7 +76,7 @@ def get_or_create_thread():
     Returns:
     string:thread_id
 
-   """
+    """
     if "thread_id" not in config["settings"]:
         thread = client.beta.threads.create()
         config["settings"]["thread_id"] = thread.id
@@ -80,37 +84,31 @@ def get_or_create_thread():
 
     return config["settings"]["thread_id"]
 
+
 def add_tools(assistant_id, tools):
     """Adds the specified tools to your current assistant"""
-    client.beta.assistants.update(
-        assistant_id = assistant_id,
-        tools=tools
-    )
+    client.beta.assistants.update(assistant_id=assistant_id, tools=tools)
+
 
 def remove_tools(assistant_id):
     """Removes all tools from your current assistant"""
-    client.beta.assistants.update(
-        assistant_id = assistant_id,
-        tools=[]
-    )
+    client.beta.assistants.update(assistant_id=assistant_id, tools=[])
+
 
 def attach_file(file):
     """Uploads a file and attaches it to your current assistant"""
-    created_file = client.files.create(
-        file=file,
-        purpose="assistants"
-    )
+    created_file = client.files.create(file=file, purpose="assistants")
 
     add_tools(get_or_create_assistant(), [{"type": "code_interpreter"}])
     assistant_file = client.beta.assistants.files.create(
-        assistant_id=get_or_create_assistant(),
-        file_id=created_file.id
+        assistant_id=get_or_create_assistant(), file_id=created_file.id
     )
     remove_tools(get_or_create_assistant())
 
     return assistant_file
 
-def send_message(content, template, interval = 1):
+
+def send_message(content, template, interval=1):
     """Builds a message and then sends it to the assistant, then checks at the specified
     interval for a response.
     """
@@ -124,11 +122,9 @@ def send_message(content, template, interval = 1):
     if template == "message":
         templated_content = content
     elif template == "note":
-        templated_content = json.dumps([{
-            'type':'note',
-            'datetime':str(NOW),
-            'content': content
-        }])
+        templated_content = json.dumps(
+            [{"type": "note", "datetime": str(NOW), "content": content}]
+        )
     else:
         templated_content = content
 
@@ -149,8 +145,7 @@ def send_message(content, template, interval = 1):
 
         if this_run.status == "completed":
             this_message = client.beta.threads.messages.list(
-                thread_id=message_run.thread_id,
-                limit=1
+                thread_id=message_run.thread_id, limit=1
             )
             logging.debug(this_run)
             break
@@ -165,6 +160,7 @@ def send_message(content, template, interval = 1):
 
     if config["settings"]["hide_responses"] == "false":
         print(this_message.data[0].content[0].text.value)
+
 
 try:
     # Parsing argument
@@ -188,14 +184,13 @@ try:
 
     if args.instructions:
         my_updated_assistant = client.beta.assistants.update(
-            get_or_create_assistant(),
-            instructions=args.instructions
+            get_or_create_assistant(), instructions=args.instructions
         )
 
         send_message(f"Ive updated your instructions to: {args.instructions}!", None, 1)
 
     if args.file:
-        with open(args.file, 'rb') as file_to_open:
+        with open(args.file, "rb") as file_to_open:
             attached_file = attach_file(file_to_open)
             logging.info(attached_file)
 
@@ -203,4 +198,4 @@ try:
 
 except argparse.ArgumentError as err:
     logging.error(err)
-    print (str(err))
+    print(str(err))
