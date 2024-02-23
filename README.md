@@ -32,8 +32,6 @@ instructions = You are a helpful assistant
 model = gpt-3.5-turbo-0125
 image_model = dall-e-3
 image_size = 1024x1024
-thread_id = 
-assistant_id = 
 
 [logging]
 level = INFO

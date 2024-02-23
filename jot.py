@@ -82,6 +82,7 @@ def get_or_create_thread():
     """
     if "thread_id" not in config["settings"]:
         thread = client.beta.threads.create()
+        print(thread)
         config["settings"]["thread_id"] = thread.id
         save_config()
 
@@ -115,8 +116,8 @@ def send_message(content, interval=1):
     """Builds a message and then sends it to the assistant, then checks at the specified
     interval for a response.
     """
-    thread_id = get_or_create_thread()
     assistant_id = get_or_create_assistant()
+    thread_id = get_or_create_thread()
 
     # If it looks like we're trying to use a file, ensure the needed tools are added
     if "file-" in content:
