@@ -6,13 +6,18 @@ Just a simple script for working with the OpenAI Assistant API.
 
 ## Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `jot -q [content]` | Sends a query to the assistant. |
-| `jot -t [template name]` | Wraps your query in a custom template prompt |
-| `jot -f [file path]` | Attaches a file to the assistant. |
-| `jot -i [instructions]` | Updates the assistants instructions. |
-| `jot -I [image prompt]` | Generates an image |
+```
+usage: jot [-h] [-o {json,text}] {image,moderate,assist,attach,instructions} prompt
+
+positional arguments:
+  {image,moderate,assist,attach,instructions}
+                        The type of model to use.
+  prompt                Your prompt.
+
+options:
+  -h, --help            show this help message and exit
+  -o {json,text}        Specifies the output type
+```
 
 ## OpenAI Setup
 You will need an API key, which can be acquired here: https://platform.openai.com/api-keys.
@@ -31,7 +36,6 @@ image_model = dall-e-3
 image_size = 1024x1024
 thread_id = 
 assistant_id = 
-hide_responses = false
 
 [logging]
 level = INFO

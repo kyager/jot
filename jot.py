@@ -149,11 +149,7 @@ def send_message(content, interval=1):
     if "file-" in content:
         remove_tools(assistant_id)
 
-    logging.debug(this_message)
-    logging.info(this_message.data[0].content[0].text.value)
-
-    if config["settings"]["hide_responses"] == "false":
-        return this_message.data[0].content[0]
+    return this_message.data[0].content[0]
 
 
 try:
