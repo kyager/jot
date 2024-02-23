@@ -101,8 +101,8 @@ def personalize(content):
     return f"Respond in the personality of a {config['settings']['personality']}: {content}"
 
 def send_message(content, template, interval = 1):
-    """Starts run and checks it every {time_in_seconds}
-    until it's status is marked as completed.
+    """Builds a message and then sends it to the assistant, then checks at the specified
+    interval for a response.
     """
     thread_id = get_or_create_thread()
     assistant_id = get_or_create_assistant()
