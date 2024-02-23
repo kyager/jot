@@ -10,13 +10,17 @@ import json
 import socket
 import time
 import logging
+import getopt
 from datetime import datetime
 from openai import OpenAI
 
 NOW = datetime.now()
 FINAL_MESSAGE = None
-COMMAND = sys.argv[1]
 NAME = socket.gethostname()
+
+ARGS = sys.argv[1:]
+OPTIONS = "qnfi:"
+LONG_OPTIONS = ["query", "note", "file", "instructions"]
 
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
@@ -144,30 +148,37 @@ def build_message(content, template):
 
     return message_run
 
+try:
+    # Parsing argument
+    arguments, values = getopt.getopt(ARGS, OPTIONS, LONG_OPTIONS)
 
-client = OpenAI()
+    # checking each argument
+    for currentArgument, currentValue in arguments:
+        client = OpenAI()
 
-if COMMAND in ["-f", "--file"]:
-    with open(sys.argv[2], 'rb') as file_to_open:
-        attached_file_id = attach_file(file_to_open).id
+        if currentArgument in ("-q", "--query"):
+            wait(build_message(sys.argv[2], "message"), 1)
 
-    wait(build_message(f"Ive added a file for you with this id: {attached_file_id}!", None), 1)
+        if currentArgument in ("-n", "--note"):
+            wait(build_message(sys.argv[2], "note"), 1)
 
-if COMMAND in ["-i", "--instructions"]:
-    instructions = sys.argv[2]
+        if currentArgument in ("-i", "--instructions"):
+            instructions = sys.argv[2]
 
-    my_updated_assistant = client.beta.assistants.update(
-      get_or_create_assistant(),
-      instructions=instructions,
-      name=NAME,
-      tools=[{"type": "retrieval"}],
-      model=config.get("settings", "model"),
-    )
+            my_updated_assistant = client.beta.assistants.update(
+              get_or_create_assistant(),
+              instructions=instructions,
+              name=NAME,
+              tools=[{"type": "retrieval"}],
+              model=config.get("settings", "model"),
+            )
 
-    wait(build_message(f"Ive updated your instructions to: {instructions}!", None), 1)
+            wait(build_message(f"Ive updated your instructions to: {instructions}!", None), 1)
 
-if COMMAND in ["-q", "--query"]:
-    wait(build_message(sys.argv[2], "message"), 1)
+        if currentArgument in ("-f", "--file"):
+            with open(sys.argv[2], 'rb') as file_to_open:
+                logging.info(attach_file(file_to_open))
 
-if COMMAND in ["-n", "--note"]:
-    wait(build_message(sys.argv[2], "note"), 1)
+except getopt.error as err:
+    logging.error(err)
+    print (str(err))
