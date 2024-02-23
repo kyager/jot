@@ -10,6 +10,7 @@ import socket
 import time
 import logging
 import argparse
+import webbrowser
 from datetime import datetime
 from openai import OpenAI
 
@@ -18,6 +19,7 @@ FINAL_MESSAGE = None
 NAME = socket.gethostname()
 
 PARSER = argparse.ArgumentParser()
+PARSER.add_argument("-I", "--image", help = "Generates an image.")
 PARSER.add_argument("-q", "--query", help = "Sends a query the assistant.")
 PARSER.add_argument("-f", "--file", help = "Attaches a file to your assistant.")
 PARSER.add_argument("-i", "--instructions", help = "Updates your assistants instructions.")
@@ -157,7 +159,7 @@ def send_message(content, template, interval = 1):
 
     if "file-" in content:
         remove_tools(assistant_id)
-        
+   
     logging.debug(this_message)
     logging.info(this_message.data[0].content[0].text.value)
 
@@ -169,6 +171,17 @@ try:
     args = PARSER.parse_args()
 
     client = OpenAI()
+
+    if args.image:
+        image = client.images.generate(
+            model=config["settings"]["image_model"],
+            prompt=args.image,
+            n=1,
+            size=str(config["settings"]["image_size"]),
+        )
+
+        webbrowser.open(image.data[0].url)
+        print(image.data[0].revised_prompt)
 
     if args.query:
         send_message(args.query, args.template, 1)
