@@ -190,7 +190,7 @@ try:
             attached_file = attach_file(file_to_open)
             logging.info(attached_file)
 
-            print(f"file_id = {attached_file.id}")
+            print(attached_file.id)
 
 except argparse.ArgumentError as err:
     logging.error(err)
