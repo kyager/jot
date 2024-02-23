@@ -19,17 +19,20 @@ FINAL_MESSAGE = None
 NAME = socket.gethostname()
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument("-I", "--image", help="Generates an image.")
-PARSER.add_argument("-q", "--query", help="Sends a query the assistant.")
-PARSER.add_argument("-f", "--file", help="Attaches a file to your assistant.")
 PARSER.add_argument(
-    "-i", "--instructions", help="Updates your assistants instructions."
+    "type",
+    help="The type of model to use.",
+    choices=["image", "moderate", "assist", "attach", "instructions"],
 )
 PARSER.add_argument(
-    "-t",
-    "--template",
-    help="Specifies a custom template for your queries",
-    default="message",
+    "prompt",
+    help="Your prompt.",
+)
+PARSER.add_argument(
+    "-o",
+    help="Specifies the output type",
+    choices=["json", "text"],
+    default="text",
 )
 
 config = configparser.ConfigParser()
@@ -108,7 +111,7 @@ def attach_file(file):
     return assistant_file
 
 
-def send_message(content, template, interval=1):
+def send_message(content, interval=1):
     """Builds a message and then sends it to the assistant, then checks at the specified
     interval for a response.
     """
@@ -119,19 +122,10 @@ def send_message(content, template, interval=1):
     if "file-" in content:
         add_tools(assistant_id, [{"type": "code_interpreter"}])
 
-    if template == "message":
-        templated_content = content
-    elif template == "note":
-        templated_content = json.dumps(
-            [{"type": "note", "datetime": str(NOW), "content": content}]
-        )
-    else:
-        templated_content = content
-
     built_message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content=templated_content,
+        content=content,
     )
 
     message_run = client.beta.threads.runs.create(
@@ -159,42 +153,65 @@ def send_message(content, template, interval=1):
     logging.info(this_message.data[0].content[0].text.value)
 
     if config["settings"]["hide_responses"] == "false":
-        print(this_message.data[0].content[0].text.value)
+        return this_message.data[0].content[0]
 
 
 try:
-    # Parsing argument
     args = PARSER.parse_args()
 
-    client = OpenAI()
-
-    if args.image:
+    if args.type == "image":
+        client = OpenAI()
         image = client.images.generate(
             model=config["settings"]["image_model"],
-            prompt=args.image,
+            prompt=args.prompt,
             n=1,
             size=str(config["settings"]["image_size"]),
         )
 
-        webbrowser.open(image.data[0].url)
-        print(image.data[0].revised_prompt)
+        if args.o == "text":
+            webbrowser.open(image.data[0].url)
+            print(image.data[0].revised_prompt)
 
-    if args.query:
-        send_message(args.query, args.template, 1)
+        elif args.o == "json":
+            print(json.dumps(image.data[0].__dict__))
 
-    if args.instructions:
+    if args.type == "moderate":
+        client = OpenAI()
+        response = client.moderations.create(input=args.prompt)
+
+        if args.o == "text":
+            for category, mod in response.results[0].categories:
+                print(f"{category.title().replace('_', ' ')}: {mod}")
+        elif args.o == "json":
+            print(json.dumps(response.results[0].categories.__dict__))
+
+    if args.type == "assist":
+        client = OpenAI()
+        response = send_message(args.prompt, 1)
+
+        if args.o == "text":
+            print(response.text.value)
+        elif args.o == "json":
+            print(json.dumps(response.text.__dict__))
+
+    if args.type == "instructions":
+        client = OpenAI()
         my_updated_assistant = client.beta.assistants.update(
-            get_or_create_assistant(), instructions=args.instructions
+            get_or_create_assistant(), instructions=args.prompt
         )
 
-        send_message(f"Ive updated your instructions to: {args.instructions}!", None, 1)
+        if args.o == "json":
+            print(json.dumps(my_updated_assistant.__dict__))
 
-    if args.file:
-        with open(args.file, "rb") as file_to_open:
+    if args.type == "attach":
+        client = OpenAI()
+        with open(args.prompt, "rb") as file_to_open:
             attached_file = attach_file(file_to_open)
-            logging.info(attached_file)
 
+        if args.o == "text":
             print(attached_file.id)
+        elif args.o == "json":
+            print(json.dumps(attached_file.__dict__))
 
 except argparse.ArgumentError as err:
     logging.error(err)
