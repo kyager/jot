@@ -22,7 +22,7 @@ PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
     "type",
     help="The type of model to use.",
-    choices=["image", "moderate", "assist", "attach", "instructions"],
+    choices=["image", "moderate", "assist", "attach", "instructions", "function"],
 )
 PARSER.add_argument(
     "prompt",
@@ -31,7 +31,7 @@ PARSER.add_argument(
 PARSER.add_argument(
     "-o",
     help="Specifies the output type",
-    choices=["json", "text"],
+    choices=["json", "text", "function"],
     default="text",
 )
 
@@ -155,6 +155,9 @@ def send_message(content, interval=1):
 
 try:
     args = PARSER.parse_args()
+
+    if args.type == "function":
+        print("Test")
 
     if args.type == "image":
         client = OpenAI()
