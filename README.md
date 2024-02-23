@@ -9,9 +9,10 @@ Just a simple script for working with the OpenAI Assistant API.
 | Command | Description |
 | ------- | ----------- |
 | `jot -q [content]` | Sends a query to the assistant. |
-| `jot -t [template_name]` | Wraps your query in a custom template prompt |
-| `jot -f [file_path]` | Attaches a file to the assistant. |
+| `jot -t [template name]` | Wraps your query in a custom template prompt |
+| `jot -f [file path]` | Attaches a file to the assistant. |
 | `jot -i [instructions]` | Updates the assistants instructions. |
+| `jot -I [image prompt]` | Generates an image |
 
 ## OpenAI Setup
 You will need an API key, which can be acquired here: https://platform.openai.com/api-keys.
