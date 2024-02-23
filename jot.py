@@ -3,14 +3,13 @@
 """
 This script provides an CLI interface for interacting with the OpenAI API.
 """
-import sys
 import os
 import configparser
 import json
 import socket
 import time
 import logging
-import getopt
+import argparse
 from datetime import datetime
 from openai import OpenAI
 
@@ -18,9 +17,16 @@ NOW = datetime.now()
 FINAL_MESSAGE = None
 NAME = socket.gethostname()
 
-ARGS = sys.argv[1:]
-OPTIONS = "qnfi:"
-LONG_OPTIONS = ["query", "note", "file", "instructions"]
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("-q", "--query", help = "Sends a query the assistant.")
+PARSER.add_argument("-f", "--file", help = "Attaches a file to your assistant.")
+PARSER.add_argument("-i", "--instructions", help = "Updates your assistants instructions.")
+PARSER.add_argument(
+    "-t",
+    "--template",
+    help = "Specifies a custom template for your queries",
+    default = "message"
+)
 
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
@@ -37,31 +43,6 @@ def save_config():
     """Saves the open configuration file"""
     with open(os.path.expanduser("~/.jot"), "w", encoding="utf-8") as configfile:
         config.write(configfile)
-
-def wait(run_to_start, time_in_seconds = 1):
-    """Starts run and checks it every {time_in_seconds}
-    until it's status is marked as completed.
-    """
-    while True:
-        this_run = client.beta.threads.runs.retrieve(
-            thread_id=run_to_start.thread_id, run_id=run_to_start.id
-        )
-
-        if this_run.status == "completed":
-            this_message = client.beta.threads.messages.list(
-                thread_id=run_to_start.thread_id,
-                limit=1
-            )
-            logging.debug(this_run)
-            break
-
-        time.sleep(time_in_seconds)
-
-    logging.debug(this_message)
-    logging.info(this_message.data[0].content[0].text.value)
-
-    if config["settings"]["hide_responses"] == "false":
-        print(this_message.data[0].content[0].text.value)
 
 def get_or_create_assistant():
     """Checks the config for an assistant id, and creates one if not.
@@ -119,12 +100,9 @@ def personalize(content):
     """Wraps the content in a personality prompt for fun"""
     return f"Respond in the personality of a {config['settings']['personality']}: {content}"
 
-def build_message(content, template):
-    """Builds a message using a specified template.
-
-    Returns:
-    object:run
-
+def send_message(content, template, interval = 1):
+    """Starts run and checks it every {time_in_seconds}
+    until it's status is marked as completed.
     """
     thread_id = get_or_create_thread()
     assistant_id = get_or_create_assistant()
@@ -150,39 +128,51 @@ def build_message(content, template):
         thread_id=built_message.thread_id, assistant_id=assistant_id
     )
 
-    return message_run
+    while True:
+        this_run = client.beta.threads.runs.retrieve(
+            thread_id=message_run.thread_id, run_id=message_run.id
+        )
+
+        if this_run.status == "completed":
+            this_message = client.beta.threads.messages.list(
+                thread_id=message_run.thread_id,
+                limit=1
+            )
+            logging.debug(this_run)
+            break
+
+        time.sleep(interval)
+
+    logging.debug(this_message)
+    logging.info(this_message.data[0].content[0].text.value)
+
+    if config["settings"]["hide_responses"] == "false":
+        print(this_message.data[0].content[0].text.value)
 
 try:
     # Parsing argument
-    arguments, values = getopt.getopt(ARGS, OPTIONS, LONG_OPTIONS)
+    args = PARSER.parse_args()
 
-    # checking each argument
-    for currentArgument, currentValue in arguments:
-        client = OpenAI()
+    client = OpenAI()
 
-        if currentArgument in ("-q", "--query"):
-            wait(build_message(sys.argv[2], "message"), 1)
+    if args.query:
+        send_message(args.query, args.template, 1)
 
-        if currentArgument in ("-n", "--note"):
-            wait(build_message(sys.argv[2], "note"), 1)
+    if args.instructions:
+        my_updated_assistant = client.beta.assistants.update(
+            get_or_create_assistant(),
+            instructions=args.instructions,
+            name=NAME,
+            tools=[{"type": "retrieval"}],
+            model=config.get("settings", "model"),
+        )
 
-        if currentArgument in ("-i", "--instructions"):
-            instructions = sys.argv[2]
+        send_message(f"Ive updated your instructions to: {args.instructions}!", None, 1)
 
-            my_updated_assistant = client.beta.assistants.update(
-              get_or_create_assistant(),
-              instructions=instructions,
-              name=NAME,
-              tools=[{"type": "retrieval"}],
-              model=config.get("settings", "model"),
-            )
+    if args.file:
+        with open(args.file, 'rb') as file_to_open:
+            logging.info(attach_file(file_to_open))
 
-            wait(build_message(f"Ive updated your instructions to: {instructions}!", None), 1)
-
-        if currentArgument in ("-f", "--file"):
-            with open(sys.argv[2], 'rb') as file_to_open:
-                logging.info(attach_file(file_to_open))
-
-except getopt.error as err:
+except argparse.ArgumentError as err:
     logging.error(err)
     print (str(err))
