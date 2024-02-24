@@ -137,7 +137,7 @@ def execute(assistant_id, thread_id, content, interval=1):
             thread_id=message_run.thread_id, run_id=message_run.id
         )
         if this_run.status == "requires_action":
-            val = input("Submit output e.g. {success: 'true'}: ")
+
             client.beta.threads.runs.submit_tool_outputs(
                 thread_id=this_run.thread_id,
                 run_id=this_run.id,
@@ -146,7 +146,7 @@ def execute(assistant_id, thread_id, content, interval=1):
                         "tool_call_id": this_run.required_action.submit_tool_outputs.tool_calls[
                             -1
                         ].id,
-                        "output": val,
+                        "output": input("Submit output e.g. {success: 'true'}: "),
                     }
                 ],
             )
