@@ -22,7 +22,7 @@ PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
     "type",
     help="The type of model to use.",
-    choices=["image", "moderate", "assist", "attach", "instructions"],
+    choices=["image", "moderate", "assist", "attach", "instructions", "run"],
 )
 PARSER.add_argument(
     "prompt",
@@ -34,6 +34,7 @@ PARSER.add_argument(
     choices=["json", "text"],
     default="text",
 )
+PARSER.add_argument("-i", "--id", help="Specifies a run_id")
 
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
@@ -112,12 +113,10 @@ def attach_file(file):
     return assistant_file
 
 
-def send_message(content, interval=1):
+def execute(assistant_id, thread_id, content, interval=1):
     """Builds a message and then sends it to the assistant, then checks at the specified
     interval for a response.
     """
-    assistant_id = get_or_create_assistant()
-    thread_id = get_or_create_thread()
 
     # If it looks like we're trying to use a file, ensure the needed tools are added
     if "file-" in content:
@@ -137,6 +136,20 @@ def send_message(content, interval=1):
         this_run = client.beta.threads.runs.retrieve(
             thread_id=message_run.thread_id, run_id=message_run.id
         )
+        if this_run.status == "requires_action":
+            val = input("Submit output e.g. {success: 'true'}: ")
+            client.beta.threads.runs.submit_tool_outputs(
+                thread_id=this_run.thread_id,
+                run_id=this_run.id,
+                tool_outputs=[
+                    {
+                        "tool_call_id": this_run.required_action.submit_tool_outputs.tool_calls[
+                            -1
+                        ].id,
+                        "output": val,
+                    }
+                ],
+            )
 
         if this_run.status == "completed":
             this_message = client.beta.threads.messages.list(
@@ -155,6 +168,29 @@ def send_message(content, interval=1):
 
 try:
     args = PARSER.parse_args()
+
+    if args.type == "run":
+        client = OpenAI()
+
+        run = client.beta.threads.runs.retrieve(
+            thread_id=get_or_create_thread(), run_id=args.prompt
+        )
+        if run.status == "requires_action":
+            val = input("Submit output e.g. {success: 'true'}: ")
+            client.beta.threads.runs.submit_tool_outputs(
+                thread_id=run.thread_id,
+                run_id=run.id,
+                tool_outputs=[
+                    {
+                        "tool_call_id": run.required_action.submit_tool_outputs.tool_calls[
+                            0
+                        ].id,
+                        "output": val,
+                    }
+                ],
+            )
+
+        print(run)
 
     if args.type == "image":
         client = OpenAI()
@@ -184,7 +220,9 @@ try:
 
     if args.type == "assist":
         client = OpenAI()
-        response = send_message(args.prompt, 1)
+        response = execute(
+            get_or_create_assistant(), get_or_create_thread(), args.prompt, 1
+        )
 
         if args.o == "text":
             print(response.text.value)
@@ -211,5 +249,4 @@ try:
             print(json.dumps(attached_file.__dict__))
 
 except argparse.ArgumentError as err:
-    logging.error(err)
-    print(str(err))
+    print(err)
