@@ -5,16 +5,17 @@
 Just a simple script for working with the OpenAI API.
 
 ```
-usage: jot [-h] [-o {json,text}] {image,moderate,assist,attach,instructions} prompt
+usage: jot [-h] [-o {json,text}] [-i ID] {image,moderate,assist,attach,instructions,run} prompt
 
 positional arguments:
-  {image,moderate,assist,attach,instructions}
+  {image,moderate,assist,attach,instructions,run}
                         The type of model to use.
   prompt                Your prompt.
 
 options:
   -h, --help            show this help message and exit
   -o {json,text}        Specifies the output type
+  -i ID, --id ID        Specifies a resource id
 ```
 
 ## OpenAI Setup
