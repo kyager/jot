@@ -35,6 +35,7 @@ PARSER.add_argument(
     default="text",
 )
 PARSER.add_argument("-i", "--id", help="Specifies a run_id")
+PARSER.add_argument("-a", "--ascii", help="Converts the generate image into ASCII art")
 
 config = configparser.ConfigParser()
 config.read(os.path.expanduser("~/.jot"))
